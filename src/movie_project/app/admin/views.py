@@ -15,7 +15,7 @@ import datetime
 from . import admin
 from flask import render_template, url_for, redirect, flash, session, request
 from app.admin.forms import LoginForm, TagForm, MovieForm, PreviewForm
-from app.models import Admin, Tag, Movie, Preview
+from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol
 from functools import wraps
 from app import db,app
 from werkzeug.utils import secure_filename
@@ -365,28 +365,100 @@ def preview_edit(id=None):
     return render_template("admin/preview_edit.html", form=form, preview=preview)
 
 
-@admin.route("/user/list/")
+# 会员列表
+@admin.route("/user/list/", methods=["GET"])
+@admin.route("/user/list/<int:page>/", methods=["GET"])
 @admin_login_req
-def user_list():
-    return render_template("admin/user_list.html")
+def user_list(page=None):
+    if page is None:
+        page = 1
+    page_data = User.query.order_by(
+        User.addtime.asc()
+    ).paginate(page=page, per_page=5)
+    return render_template("admin/user_list.html", page_data=page_data)
 
 
-@admin.route("/user/view/")
+# 会员查看
+@admin.route("/user/view/<int:id>/", methods=["GET"])
 @admin_login_req
-def user_view():
-    return render_template("admin/user_view.html")
+def user_view(id=None):
+    user = User.query.filter_by(id=id).first_or_404()
+    return render_template("admin/user_view.html", user=user)
 
 
-@admin.route("/comment/list/")
+# 会员删除
+# 暂时不启用 会员直接删除好像有点蠢 可以考虑加黑名单
+@admin.route("/user/del/<int:id>/", methods=["GET"])
 @admin_login_req
-def comment_list():
-    return render_template("admin/comment_list.html")
+def user_del(id=None):
+    pass
+    # user = User.query.filter_by(id=id).first_or_404()
+    # db.session.delete(user)
+    # db.session.commit()
+    # flash("删除会员成功", "ok")
+    # return redirect(url_for("admin.user_list"))
 
 
-@admin.route("/moviecol/list/")
+# 评论列表
+@admin.route("/comment/list/", methods=["GET"])
+@admin.route("/comment/list/<int:page>", methods=["GET"])
 @admin_login_req
-def moviecol_list():
-    return render_template("admin/moviecol_list.html")
+def comment_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Comment.query.join(
+        Movie
+    ).join(
+        User
+    ).filter(
+        Movie.id == Comment.movie_id,
+        User.id == Comment.user_id
+    ).order_by(
+        Comment.addtime.asc()
+    ).paginate(page=page, per_page=5)
+    return render_template("admin/comment_list.html", page_data=page_data)
+
+
+# 评论删除
+@admin.route("/comment/del/<int:id>/", methods=["GET"])
+@admin_login_req
+def comment_del(id=None):
+    comment = Comment.query.filter_by(id=id).first_or_404()
+    db.session.delete(comment)
+    db.session.commit()
+    flash("删除评论成功", "ok")
+    return redirect(url_for("admin.comment_list"))
+
+
+# 电影收藏列表
+@admin.route("/moviecol/list/", methods=["GET"])
+@admin.route("/moviecol/list/<int:page>/", methods=["GET"])
+@admin_login_req
+def moviecol_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Moviecol.query.join(
+        Movie
+    ).join(
+        User
+    ).filter(
+        Movie.id == Moviecol.movie_id,
+        User.id == Moviecol.user_id
+    ).order_by(
+        Moviecol.addtime.asc()
+    ).paginate(page=page, per_page=5)
+    return render_template("admin/moviecol_list.html", page_data=page_data)
+
+
+# 电影收藏删除
+@admin.route("/moviecol/del/<int:id>/", methods=["GET"])
+@admin_login_req
+def moviecol_del(id=None):
+    moviecol = Moviecol.query.filter_by(id=id).first_or_404()
+    db.session.delete(moviecol)
+    db.session.commit()
+    flash("删除电影收藏成功", "ok")
+    return redirect(url_for("admin.moviecol_list"))
 
 
 @admin.route("/oplog/list/")
