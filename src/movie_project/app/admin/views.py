@@ -14,12 +14,13 @@ import datetime
 
 from . import admin
 from flask import render_template, url_for, redirect, flash, session, request
-from app.admin.forms import LoginForm, TagForm, MovieForm, PreviewForm
+from app.admin.forms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm
 from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol
 from functools import wraps
 from app import db,app
 from werkzeug.utils import secure_filename
 from pypinyin import lazy_pinyin
+from werkzeug.security import generate_password_hash
 
 
 # 登陆控制装饰器
@@ -70,10 +71,25 @@ def logout():
     return redirect(url_for("admin.login"))
 
 
-@admin.route("/pwd/")
+# 管理员修改密码
+@admin.route("/pwd/", methods=["GET", "POST"])
 @admin_login_req
 def pwd():
-    return render_template("admin/pwd.html")
+    form = PwdForm()
+    if form.validate_on_submit():
+        data = form.data
+        if data["new_pwd"] != data["check_pwd"]:
+            flash("两次密码输入不一致！", "err")
+            return render_template("admin/pwd.html", form=form)
+        name = session["account"]
+        account = Admin.query.filter_by(name=name).first()
+        account.pwd = generate_password_hash(data["new_pwd"])
+        db.session.add(account)
+        db.session.commit()
+        flash("修改密码成功，请重新登陆！", "ok")
+        # 修改成功应该退出然后提示登陆
+        return redirect(url_for("admin.logout"))
+    return render_template("admin/pwd.html", form=form)
 
 
 # 添加标签

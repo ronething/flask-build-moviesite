@@ -262,3 +262,68 @@ class PreviewForm(FlaskForm):
             "class": "btn btn-primary"
         }
     )
+
+
+class PwdForm(FlaskForm):
+    """
+    密码表单
+    """
+    old_pwd = PasswordField(
+        label="旧密码",
+        validators=[
+            DataRequired("请输入旧密码！")
+        ],
+        description="旧密码",
+        render_kw={
+            "class": "form-control",
+            "placeholder": "请输入旧密码！",
+            "id": "input_old_pwd",
+            "required": False
+        }
+    )
+
+    new_pwd = PasswordField(
+        label="新密码",
+        validators=[
+            DataRequired("请输入新密码！")
+        ],
+        description="新密码",
+        render_kw={
+            "class": "form-control",
+            "placeholder": "请输入新密码！",
+            "id": "input_new_pwd",
+            "required": False
+        }
+    )
+
+    check_pwd = PasswordField(
+        label="确认密码",
+        validators=[
+            DataRequired("请输入确认密码！")
+        ],
+        description="确认密码",
+        render_kw={
+            "class": "form-control",
+            "placeholder": "请输入确认密码！",
+            "id": "input_check_pwd",
+            "required": False
+        }
+    )
+
+    submit = SubmitField(
+        "确认",
+        render_kw={
+            "class": "btn btn-primary"
+        }
+    )
+
+    def validate_old_pwd(self, field):
+        from flask import session, flash
+        old_pwd = field.data
+        if session.get("account") is None:
+            raise ValidationError("不谈了！")
+        name = session["account"]
+        account = Admin.query.filter_by(name=name).first()
+        if not account.check_pwd(old_pwd):
+            flash("旧密码错误！", "err")
+            raise ValidationError("旧密码错误！")
