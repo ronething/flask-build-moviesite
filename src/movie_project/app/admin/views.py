@@ -15,7 +15,7 @@ import datetime
 from . import admin
 from flask import render_template, url_for, redirect, flash, session, request
 from app.admin.forms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm
-from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol
+from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, Userlog
 from functools import wraps
 from app import db,app
 from werkzeug.utils import secure_filename
@@ -23,12 +23,21 @@ from pypinyin import lazy_pinyin
 from werkzeug.security import generate_password_hash
 
 
+# 上下文应用处理器
+@admin.context_processor
+def tpl_extra():
+    data = dict(
+        online_time=datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    )
+
+    return data
+
 # 登陆控制装饰器
 def admin_login_req(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get("account") is None:
-            return redirect(url_for("admin.login", next=request.url)) # 和 第 45 行 request.args.get("next") 联动
+            return redirect(url_for("admin.login", next=request.url)) # 和 第 410 行 request.args.get("next") 联动
         return f(*args, **kwargs)
 
     return decorated_function
@@ -57,9 +66,29 @@ def login():
         data = form.data
         account = Admin.query.filter_by(name=data["account"]).first()
         if not account.check_pwd(data["pwd"]):
+            oplog = Oplog(
+                admin_id=account.id,
+                ip=request.remote_addr,
+                reason="登陆管理员账户 {0} 失败".format(account.name)
+            )
+            db.session.add(oplog)
+            db.session.commit()
             flash("密码错误！", "err")
             return redirect(url_for("admin.login"))
         session["account"] = data["account"]
+        session["admin_id"] = account.id
+        adminlog = Adminlog(
+            admin_id=account.id,
+            ip=request.remote_addr
+        )
+        oplog = Oplog(
+            admin_id=account.id,
+            ip=request.remote_addr,
+            reason="登陆管理员账户 {0} 成功".format(account.name)
+        )
+        db.session.add(adminlog)
+        db.session.add(oplog)
+        db.session.commit()
         return redirect(request.args.get("next") or url_for("admin.index"))
     return render_template("admin/login.html", form=form)
 
@@ -67,7 +96,16 @@ def login():
 @admin.route("/logout/")
 @admin_login_req
 def logout():
+    oplog = Oplog(
+        admin_id=session["admin_id"],
+        ip=request.remote_addr,
+        reason="注销管理员账户 {0} ".format(session["account"])
+    )
+    db.session.add(oplog)
+    db.session.commit()
     session.pop("account", None)
+    session.pop("admin_id", None)
+    flash("注销成功", "ok")
     return redirect(url_for("admin.login"))
 
 
@@ -107,6 +145,13 @@ def tag_add():
             name=data["name"]
         )
         db.session.add(tag)
+        # db.session.commit()
+        oplog = Oplog(
+            admin_id=session["admin_id"],
+            ip=request.remote_addr,
+            reason="添加标签：{0}".format(data["name"])
+        )
+        db.session.add(oplog)
         db.session.commit()
         flash("添加标签成功", "ok")
         return redirect(url_for("admin.tag_add"))
@@ -123,7 +168,7 @@ def tag_list(page=None):
         page = 1
     page_data = Tag.query.order_by(
         Tag.addtime.asc()
-    ).paginate(page=page, per_page=5)
+    ).paginate(page=page, per_page=10)
     return render_template("admin/tag_list.html", page_data=page_data)
 
 
@@ -154,6 +199,13 @@ def tag_edit(id=None):
 def tag_del(id=None):
     tag = Tag.query.filter_by(id=id).first_or_404()
     db.session.delete(tag)
+    # db.session.commit()
+    oplog = Oplog(
+        admin_id=session["admin_id"],
+        ip=request.remote_addr,
+        reason="删除标签：{0}".format(tag.name)
+    )
+    db.session.add(oplog)
     db.session.commit()
     flash("删除标签成功", "ok")
     return redirect(url_for("admin.tag_list"))
@@ -201,6 +253,12 @@ def movie_add():
             length=data["length"],
         )
         db.session.add(movie)
+        oplog = Oplog(
+            admin_id=session["admin_id"],
+            ip=request.remote_addr,
+            reason="添加电影：{0}".format(data["title"])
+        )
+        db.session.add(oplog)
         db.session.commit()
         flash("添加电影成功", "ok")
         return redirect(url_for("admin.movie_add"))
@@ -219,7 +277,7 @@ def movie_list(page=None):
       Movie.tag_id == Tag.id
     ).order_by(
         Movie.addtime.asc()
-    ).paginate(page=page, per_page=5)
+    ).paginate(page=page, per_page=10)
     return render_template("admin/movie_list.html", page_data=page_data)
 
 
@@ -229,6 +287,12 @@ def movie_list(page=None):
 def movie_del(id=None):
     movie = Movie.query.filter_by(id=id).first_or_404()
     db.session.delete(movie)
+    oplog = Oplog(
+        admin_id=session["admin_id"],
+        ip=request.remote_addr,
+        reason="删除电影：{0}".format(movie.title)
+    )
+    db.session.add(oplog)
     db.session.commit()
     flash("删除电影成功", "ok")
     return redirect(url_for("admin.movie_list"))
@@ -316,6 +380,12 @@ def preview_add():
             logo=logo,
         )
         db.session.add(preview)
+        oplog = Oplog(
+            admin_id=session["admin_id"],
+            ip=request.remote_addr,
+            reason="添加上映预告：{0}".format(data["title"])
+        )
+        db.session.add(oplog)
         db.session.commit()
         flash("添加上映预告成功", "ok")
         return redirect(url_for("admin.preview_add"))
@@ -331,7 +401,7 @@ def preview_list(page=None):
         page = 1
     page_data = Preview.query.order_by(
         Preview.addtime.asc()
-    ).paginate(page=page, per_page=5)
+    ).paginate(page=page, per_page=10)
     return render_template("admin/preview_list.html", page_data=page_data)
 
 
@@ -341,8 +411,14 @@ def preview_list(page=None):
 def preview_del(id=None):
     preview = Preview.query.filter_by(id=id).first_or_404()
     db.session.delete(preview)
+    oplog = Oplog(
+        admin_id=session["admin_id"],
+        ip=request.remote_addr,
+        reason="删除上映预告：{0}".format(preview.title)
+    )
+    db.session.add(oplog)
     db.session.commit()
-    flash("删除电影成功", "ok")
+    flash("删除上映预告成功", "ok")
     return redirect(url_for("admin.preview_list"))
 
 
@@ -390,7 +466,7 @@ def user_list(page=None):
         page = 1
     page_data = User.query.order_by(
         User.addtime.asc()
-    ).paginate(page=page, per_page=5)
+    ).paginate(page=page, per_page=10)
     return render_template("admin/user_list.html", page_data=page_data)
 
 
@@ -431,7 +507,7 @@ def comment_list(page=None):
         User.id == Comment.user_id
     ).order_by(
         Comment.addtime.asc()
-    ).paginate(page=page, per_page=5)
+    ).paginate(page=page, per_page=10)
     return render_template("admin/comment_list.html", page_data=page_data)
 
 
@@ -441,6 +517,12 @@ def comment_list(page=None):
 def comment_del(id=None):
     comment = Comment.query.filter_by(id=id).first_or_404()
     db.session.delete(comment)
+    oplog = Oplog(
+        admin_id=session["admin_id"],
+        ip=request.remote_addr,
+        reason="删除评论，评论 id 为：{0}，用户 id 为：{1}，电影 id 为：{2}".format(comment.id, comment.user_id, comment.movie_id)
+    )
+    db.session.add(oplog)
     db.session.commit()
     flash("删除评论成功", "ok")
     return redirect(url_for("admin.comment_list"))
@@ -462,7 +544,7 @@ def moviecol_list(page=None):
         User.id == Moviecol.user_id
     ).order_by(
         Moviecol.addtime.asc()
-    ).paginate(page=page, per_page=5)
+    ).paginate(page=page, per_page=10)
     return render_template("admin/moviecol_list.html", page_data=page_data)
 
 
@@ -472,27 +554,66 @@ def moviecol_list(page=None):
 def moviecol_del(id=None):
     moviecol = Moviecol.query.filter_by(id=id).first_or_404()
     db.session.delete(moviecol)
+    oplog = Oplog(
+        admin_id=session["admin_id"],
+        ip=request.remote_addr,
+        reason="删除电影收藏，电影 id 为：{0}，用户 id 为：{1}".format(moviecol.movie_id, moviecol.user_id)
+    )
+    db.session.add(oplog)
     db.session.commit()
     flash("删除电影收藏成功", "ok")
     return redirect(url_for("admin.moviecol_list"))
 
 
-@admin.route("/oplog/list/")
+# 操作日志列表
+@admin.route("/oplog/list/", methods=["GET"])
+@admin.route("/oplog/list/<int:page>/", methods=["GET"])
 @admin_login_req
-def oplog_list():
-    return render_template("admin/oplog_list.html")
+def oplog_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Oplog.query.join(
+        Admin
+    ).filter(
+        Oplog.admin_id == Admin.id,
+    ).order_by(
+        Oplog.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    return render_template("admin/oplog_list.html", page_data=page_data)
 
 
-@admin.route("/adminloginlog/list/")
+# 管理员登陆日志列表
+@admin.route("/adminloginlog/list/", methods=["GET"])
+@admin.route("/adminloginlog/list/<int:page>/", methods=["GET"])
 @admin_login_req
-def adminloginlog_list():
-    return render_template("admin/adminloginlog_list.html")
+def adminloginlog_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Adminlog.query.join(
+        Admin
+    ).filter(
+        Adminlog.admin_id == Admin.id,
+    ).order_by(
+        Adminlog.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    return render_template("admin/adminloginlog_list.html", page_data=page_data)
 
 
-@admin.route("/userloginlog/list/")
+# 会员登陆日志
+@admin.route("/userloginlog/list/", methods=["GET"])
+@admin.route("/userloginlog/list/<int:page>/", methods=["GET"])
 @admin_login_req
-def userloginlog_list():
-    return render_template("admin/userloginlog_list.html")
+def userloginlog_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Userlog.query.join(
+        User
+    ).filter(
+        Userlog.user_id == User.id,
+    ).order_by(
+        Userlog.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    return render_template("admin/userloginlog_list.html", page_data=page_data)
 
 
 @admin.route("/auth/add")
