@@ -618,7 +618,7 @@ def userloginlog_list(page=None):
 
 
 # 权限添加
-@admin.route("/auth/add", methods=["GET", "POST"])
+@admin.route("/auth/add/", methods=["GET", "POST"])
 @admin_login_req
 def auth_add():
     form = AuthForm()
@@ -690,7 +690,7 @@ def auth_edit(id=None):
     return render_template("admin/auth_edit.html", form=form, auth=auth)
 
 
-@admin.route("/role/add")
+@admin.route("/role/add/")
 @admin_login_req
 def role_add():
     return render_template("admin/role_add.html")
@@ -702,7 +702,7 @@ def role_list():
     return render_template("admin/role_list.html")
 
 
-@admin.route("/admin/add")
+@admin.route("/admin/add/")
 @admin_login_req
 def admin_add():
     return render_template("admin/admin_add.html")
