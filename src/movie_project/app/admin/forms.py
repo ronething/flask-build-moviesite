@@ -327,3 +327,43 @@ class PwdForm(FlaskForm):
         if not account.check_pwd(old_pwd):
             flash("旧密码错误！", "err")
             raise ValidationError("旧密码错误！")
+
+
+class AuthForm(FlaskForm):
+    """
+    权限控制表单
+    """
+    name = StringField(
+        label="权限名称",
+        validators=[
+            DataRequired("请输入权限名称！")
+        ],
+        description="权限名称",
+        render_kw={
+            "class": "form-control",
+            "id": "input_name",
+            "placeholder": "请输入权限名称！",
+            "required": False
+        }
+    )
+
+    url = StringField(
+        label="权限地址",
+        validators=[
+            DataRequired("请输入权限地址！")
+        ],
+        description="权限地址",
+        render_kw={
+            "class": "form-control",
+            "id": "input_url",
+            "placeholder": "请输入权限地址！",
+            "required": False
+        }
+    )
+
+    submit = SubmitField(
+        "确认",
+        render_kw={
+            "class": "btn btn-primary"
+        }
+    )

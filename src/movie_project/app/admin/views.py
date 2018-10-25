@@ -14,8 +14,8 @@ import datetime
 
 from . import admin
 from flask import render_template, url_for, redirect, flash, session, request
-from app.admin.forms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm
-from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, Userlog
+from app.admin.forms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm
+from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, Userlog, Auth
 from functools import wraps
 from app import db,app
 from werkzeug.utils import secure_filename
@@ -31,6 +31,7 @@ def tpl_extra():
     )
 
     return data
+
 
 # 登陆控制装饰器
 def admin_login_req(f):
@@ -616,16 +617,77 @@ def userloginlog_list(page=None):
     return render_template("admin/userloginlog_list.html", page_data=page_data)
 
 
-@admin.route("/auth/add")
+# 权限添加
+@admin.route("/auth/add", methods=["GET", "POST"])
 @admin_login_req
 def auth_add():
-    return render_template("admin/auth_add.html")
+    form = AuthForm()
+    if form.validate_on_submit():
+        data = form.data
+        auth = Auth(
+            name=data["name"],
+            url=data["url"]
+        )
+        db.session.add(auth)
+        oplog = Oplog(
+            admin_id=session["admin_id"],
+            ip=request.remote_addr,
+            reason="添加权限控制 "
+                   "name: {0} "
+                   "url: {1}".format(auth.name, auth.url)
+        )
+        db.session.add(oplog)
+        db.session.commit()
+        flash("权限添加成功", "ok")
+        return redirect(url_for("admin.auth_add"))
+    return render_template("admin/auth_add.html", form=form)
 
 
-@admin.route("/auth/list/")
+# 权限列表
+@admin.route("/auth/list/", methods=["GET"])
+@admin.route("/auth/list/<int:page>/", methods=["GET"])
 @admin_login_req
-def auth_list():
-    return render_template("admin/auth_list.html")
+def auth_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Auth.query.order_by(
+        Auth.addtime.asc()
+    ).paginate(page=page, per_page=10)
+    return render_template("admin/auth_list.html", page_data=page_data)
+
+
+# 权限删除
+@admin.route("/auth/del/<int:id>/", methods=["GET"])
+@admin_login_req
+def auth_del(id=None):
+    auth = Auth.query.filter_by(id=id).first_or_404()
+    db.session.delete(auth)
+    oplog = Oplog(
+        admin_id=session["admin_id"],
+        ip=request.remote_addr,
+        reason="删除权限：{0} url: {1}".format(auth.name,auth.url)
+    )
+    db.session.add(oplog)
+    db.session.commit()
+    flash("删除权限成功", "ok")
+    return redirect(url_for("admin.auth_list"))
+
+
+# 权限编辑
+@admin.route("/auth/edit/<int:id>/", methods=["GET", "POST"])
+@admin_login_req
+def auth_edit(id=None):
+    form = AuthForm()
+    auth = Auth.query.filter_by(id=id).first_or_404()
+    if form.validate_on_submit():
+        data = form.data
+        auth.name = data["name"]
+        auth.url = data["url"]
+        db.session.add(auth)
+        db.session.commit()
+        flash("修改权限成功", "ok")
+        return redirect(url_for("admin.auth_edit", id=id))
+    return render_template("admin/auth_edit.html", form=form, auth=auth)
 
 
 @admin.route("/role/add")
