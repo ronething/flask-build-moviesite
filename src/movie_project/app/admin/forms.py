@@ -20,7 +20,9 @@ from app.models import Admin, Tag, Auth, Role
 # 查询所有标签
 tags = Tag.query.all()
 # 查询所有权限
-auths_list = Auth.query.all()
+auths_list = Auth.query.order_by(
+    Auth.url.desc()
+)
 # 查询所有角色
 role_list = Role.query.all()
 
