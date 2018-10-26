@@ -41,7 +41,7 @@
                         </div>
                         {% endfor %}
                         <div class="form-group">
-                            <label for="input_name">{{ form.name.label }}</label>
+                            {{ form.name.label }}
                             {{ form.name(value=role.name) }}
                             {% for err in form.name.errors %}
                             <div>
@@ -51,7 +51,7 @@
                         </div>
                         <div class="form-group" id="auth_list">
                             <div class="col-md-12">
-                                <label>{{ form.auths.label }}</label>
+                                {{ form.auths.label }}
                             </div>
                             {{ form.auths }}
                             {% for err in form.auths.errors %}

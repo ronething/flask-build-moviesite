@@ -33,7 +33,7 @@
                         </div>
                         {% endfor %}
                         <div class="form-group">
-                            <label for="input_name">{{ form.name.label }}</label>
+                            {{ form.name.label }}
                             {{ form.name(value=tag.name) }}
                             {% for err in form.name.errors %}
                             <div>
