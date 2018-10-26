@@ -12,14 +12,17 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, \
     SubmitField, FileField, TextAreaField, \
     SelectField, SelectMultipleField
-from wtforms.validators import DataRequired, ValidationError
+from wtforms.validators import DataRequired, ValidationError, EqualTo
 
-from app.models import Admin, Tag, Auth
+from app.models import Admin, Tag, Auth, Role
 
+# TODO 无法实时更新 tags or auths_lsit 后续需要修改
 # 查询所有标签
 tags = Tag.query.all()
 # 查询所有权限
 auths_list = Auth.query.all()
+# 查询所有角色
+role_list = Role.query.all()
 
 
 class LoginForm(FlaskForm):
@@ -78,7 +81,6 @@ class TagForm(FlaskForm):
         description="标签",
         render_kw={
             "class": "form-control",
-            "id": "input_name",
             "placeholder": "请输入标签名称！",
             "required": False
         }
@@ -104,7 +106,6 @@ class MovieForm(FlaskForm):
         description="片名",
         render_kw={
             "class": "form-control",
-            "id": "input_title",
             "placeholder": "请输入片名！",
             "required": False
         }
@@ -117,7 +118,6 @@ class MovieForm(FlaskForm):
         ],
         description="文件",
         render_kw={
-            "id": "input_url",
             "required": False
         }
     )
@@ -131,7 +131,6 @@ class MovieForm(FlaskForm):
         render_kw={
             "class": "form-control",
             "rows": "10",
-            "id": "input_info",
             "required": False
         }
     )
@@ -143,7 +142,6 @@ class MovieForm(FlaskForm):
         ],
         description="封面",
         render_kw={
-            "id": "input_logo",
             "required": False
         }
     )
@@ -158,7 +156,6 @@ class MovieForm(FlaskForm):
         description="星级",
         render_kw={
             "class": "form-control",
-            "id": "input_star",
             "required": False
         }
     )
@@ -173,7 +170,6 @@ class MovieForm(FlaskForm):
         description="标签",
         render_kw={
             "class": "form-control",
-            "id": "input_tag_id",
             "required": False
         }
     )
@@ -187,7 +183,6 @@ class MovieForm(FlaskForm):
         render_kw={
             "class": "form-control",
             "placeholder": "请输入地区！",
-            "id": "input_area",
             "required": False
         }
     )
@@ -201,7 +196,6 @@ class MovieForm(FlaskForm):
         render_kw={
             "class": "form-control",
             "placeholder": "请输入片长！",
-            "id": "input_length",
             "required": False
         }
     )
@@ -214,7 +208,6 @@ class MovieForm(FlaskForm):
         description="上映时间",
         render_kw={
             "class": "form-control",
-            "id": "input_release_time",
             "placeholder": "请选择上映时间！",
             "required": False
         }
@@ -240,7 +233,6 @@ class PreviewForm(FlaskForm):
         description="预告标题",
         render_kw={
             "class": "form-control",
-            "id": "input_title",
             "placeholder": "请输入预告标题！",
             "required": False
         }
@@ -253,7 +245,6 @@ class PreviewForm(FlaskForm):
         ],
         description="预告封面",
         render_kw={
-            "id": "input_logo",
             "required": False
         }
     )
@@ -279,7 +270,6 @@ class PwdForm(FlaskForm):
         render_kw={
             "class": "form-control",
             "placeholder": "请输入旧密码！",
-            "id": "input_old_pwd",
             "required": False
         }
     )
@@ -293,7 +283,6 @@ class PwdForm(FlaskForm):
         render_kw={
             "class": "form-control",
             "placeholder": "请输入新密码！",
-            "id": "input_new_pwd",
             "required": False
         }
     )
@@ -301,13 +290,13 @@ class PwdForm(FlaskForm):
     check_pwd = PasswordField(
         label="确认密码",
         validators=[
-            DataRequired("请输入确认密码！")
+            DataRequired("请输入确认密码！"),
+            EqualTo("new_pwd", message="两次密码不一致！")
         ],
         description="确认密码",
         render_kw={
             "class": "form-control",
             "placeholder": "请输入确认密码！",
-            "id": "input_check_pwd",
             "required": False
         }
     )
@@ -343,7 +332,6 @@ class AuthForm(FlaskForm):
         description="权限名称",
         render_kw={
             "class": "form-control",
-            "id": "input_name",
             "placeholder": "请输入权限名称！",
             "required": False
         }
@@ -357,7 +345,6 @@ class AuthForm(FlaskForm):
         description="权限地址",
         render_kw={
             "class": "form-control",
-            "id": "input_url",
             "placeholder": "请输入权限地址！",
             "required": False
         }
@@ -373,7 +360,7 @@ class AuthForm(FlaskForm):
 
 class RoleForm(FlaskForm):
     """
-
+    角色表单
     """
     name = StringField(
         label="角色名称",
@@ -383,7 +370,6 @@ class RoleForm(FlaskForm):
         description="角色名称",
         render_kw={
             "class": "form-control",
-            "id": "input_name",
             "placeholder": "请输入角色名称！",
             "required": False
         }
@@ -397,6 +383,72 @@ class RoleForm(FlaskForm):
         description="操作权限",
         coerce=int,
         choices=[(i.id, i.name) for i in auths_list],
+        render_kw={
+            "class": "form-control",
+            "required": False
+        }
+    )
+
+    submit = SubmitField(
+        "确认",
+        render_kw={
+            "class": "btn btn-primary"
+        }
+    )
+
+
+class AdminForm(FlaskForm):
+    """
+    管理员表单
+    """
+    name = StringField(
+        label="管理员名称",
+        validators=[
+            DataRequired("请输入管理员名称！")
+        ],
+        description="管理员名称",
+        render_kw={
+            "class": "form-control",
+            "placeholder": "请输入管理员名称！",
+            "required": False
+        }
+    )
+
+    pwd = PasswordField(
+        label="管理员密码",
+        validators=[
+            DataRequired("请输入管理员密码！")
+        ],
+        description="管理员密码",
+        render_kw={
+            "class": "form-control",
+            "placeholder": "请输入新密码！",
+            "required": False
+        }
+    )
+
+    re_pwd = PasswordField(
+        label="确认密码",
+        validators=[
+            DataRequired("请输入确认密码！"),
+            EqualTo("pwd", message="两次密码不一致！")
+        ],
+        description="确认密码",
+        render_kw={
+            "class": "form-control",
+            "placeholder": "请输入确认密码！",
+            "required": False
+        }
+    )
+
+    role_id = SelectField(
+        label="所属角色",
+        validators=[
+            DataRequired("请选择角色！")
+        ],
+        coerce=int,
+        choices=[(i.id, i.name) for i in role_list],
+        description="所属角色",
         render_kw={
             "class": "form-control",
             "required": False

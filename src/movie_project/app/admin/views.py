@@ -14,7 +14,7 @@ import datetime
 
 from . import admin
 from flask import render_template, url_for, redirect, flash, session, request
-from app.admin.forms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm, RoleForm
+from app.admin.forms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm, RoleForm, AdminForm
 from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, Userlog, Auth, Role
 from functools import wraps
 from app import db, app
@@ -117,9 +117,10 @@ def pwd():
     form = PwdForm()
     if form.validate_on_submit():
         data = form.data
-        if data["new_pwd"] != data["check_pwd"]:
-            flash("两次密码输入不一致！", "err")
-            return render_template("admin/pwd.html", form=form)
+        # 已经在 forms.py 中使用 EqualTo 方法解决
+        # if data["new_pwd"] != data["check_pwd"]:
+        #     flash("两次密码输入不一致！", "err")
+        #     return render_template("admin/pwd.html", form=form)
         name = session["account"]
         account = Admin.query.filter_by(name=name).first()
         account.pwd = generate_password_hash(data["new_pwd"])
@@ -767,13 +768,44 @@ def role_edit(id=None):
     return render_template("admin/role_edit.html", form=form, role=role)
 
 
-@admin.route("/admin/add/")
+# 管理员添加
+@admin.route("/admin/add/", methods=["GET", "POST"])
 @admin_login_req
 def admin_add():
-    return render_template("admin/admin_add.html")
+    form = AdminForm()
+    if form.validate_on_submit():
+        data = form.data
+        admin = Admin(
+            name=data["name"],
+            pwd=generate_password_hash(data["pwd"]),
+            role_id=data["role_id"],
+            is_super=1,     # 表示普通管理员
+        )
+        db.session.add(admin)
+        oplog = Oplog(
+            admin_id=session["admin_id"],
+            ip=request.remote_addr,
+            reason="添加管理员：{0}".format(admin.name),
+        )
+        db.session.add(oplog)
+        db.session.commit()
+        flash("添加管理员成功", "ok")
+        return redirect(url_for("admin.admin_add"))
+    return render_template("admin/admin_add.html", form=form)
 
 
-@admin.route("/admin/list/")
+# 管理员列表
+@admin.route("/admin/list/", methods=["GET"])
+@admin.route("/admin/list/<int:page>/", methods=["GET"])
 @admin_login_req
-def admin_list():
-    return render_template("admin/admin_list.html")
+def admin_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Admin.query.join(
+        Role
+    ).filter(
+        Role.id == Admin.role_id
+    ).order_by(
+        Admin.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    return render_template("admin/admin_list.html", page_data=page_data)
