@@ -11,13 +11,15 @@ Less is more.
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, \
     SubmitField, FileField, TextAreaField, \
-    SelectField
+    SelectField, SelectMultipleField
 from wtforms.validators import DataRequired, ValidationError
 
-from app.models import Admin, Tag
+from app.models import Admin, Tag, Auth
 
 # 查询所有标签
 tags = Tag.query.all()
+# 查询所有权限
+auths_list = Auth.query.all()
 
 
 class LoginForm(FlaskForm):
@@ -357,6 +359,46 @@ class AuthForm(FlaskForm):
             "class": "form-control",
             "id": "input_url",
             "placeholder": "请输入权限地址！",
+            "required": False
+        }
+    )
+
+    submit = SubmitField(
+        "确认",
+        render_kw={
+            "class": "btn btn-primary"
+        }
+    )
+
+
+class RoleForm(FlaskForm):
+    """
+
+    """
+    name = StringField(
+        label="角色名称",
+        validators=[
+            DataRequired("请输入角色名称！")
+        ],
+        description="角色名称",
+        render_kw={
+            "class": "form-control",
+            "id": "input_name",
+            "placeholder": "请输入角色名称！",
+            "required": False
+        }
+    )
+
+    auths = SelectMultipleField(
+        label="操作权限",
+        validators=[
+            DataRequired("请选择操作权限")
+        ],
+        description="操作权限",
+        coerce=int,
+        choices=[(i.id, i.name) for i in auths_list],
+        render_kw={
+            "class": "form-control",
             "required": False
         }
     )

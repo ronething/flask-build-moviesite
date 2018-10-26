@@ -14,10 +14,10 @@ import datetime
 
 from . import admin
 from flask import render_template, url_for, redirect, flash, session, request
-from app.admin.forms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm
-from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, Userlog, Auth
+from app.admin.forms import LoginForm, TagForm, MovieForm, PreviewForm, PwdForm, AuthForm, RoleForm
+from app.models import Admin, Tag, Movie, Preview, User, Comment, Moviecol, Oplog, Adminlog, Userlog, Auth, Role
 from functools import wraps
-from app import db,app
+from app import db, app
 from werkzeug.utils import secure_filename
 from pypinyin import lazy_pinyin
 from werkzeug.security import generate_password_hash
@@ -38,7 +38,7 @@ def admin_login_req(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get("account") is None:
-            return redirect(url_for("admin.login", next=request.url)) # 和 第 410 行 request.args.get("next") 联动
+            return redirect(url_for("admin.login", next=request.url))  # 和 第 410 行 request.args.get("next") 联动
         return f(*args, **kwargs)
 
     return decorated_function
@@ -275,7 +275,7 @@ def movie_list(page=None):
     if page is None:
         page = 1
     page_data = Movie.query.join(Tag).filter(
-      Movie.tag_id == Tag.id
+        Movie.tag_id == Tag.id
     ).order_by(
         Movie.addtime.asc()
     ).paginate(page=page, per_page=10)
@@ -651,7 +651,7 @@ def auth_list(page=None):
     if page is None:
         page = 1
     page_data = Auth.query.order_by(
-        Auth.addtime.asc()
+        Auth.url.asc()
     ).paginate(page=page, per_page=10)
     return render_template("admin/auth_list.html", page_data=page_data)
 
@@ -665,7 +665,7 @@ def auth_del(id=None):
     oplog = Oplog(
         admin_id=session["admin_id"],
         ip=request.remote_addr,
-        reason="删除权限：{0} url: {1}".format(auth.name,auth.url)
+        reason="删除权限：{0} url: {1}".format(auth.name, auth.url)
     )
     db.session.add(oplog)
     db.session.commit()
@@ -690,16 +690,81 @@ def auth_edit(id=None):
     return render_template("admin/auth_edit.html", form=form, auth=auth)
 
 
-@admin.route("/role/add/")
+# 角色添加
+@admin.route("/role/add/", methods=["GET", "POST"])
 @admin_login_req
 def role_add():
-    return render_template("admin/role_add.html")
+    form = RoleForm()
+    # 在 forms 里面查出的 auths 不会自动更新的 后期看看有没有其他方法 没有的话就用这个吧。
+    # form.auths.choices = [(i.id, i.name) for i in Auth.query.all()]
+    if form.validate_on_submit():
+        data = form.data
+        role = Role(
+            name=data["name"],
+            auths=",".join(map(lambda i: str(i), data["auths"]))
+        )
+        db.session.add(role)
+        oplog = Oplog(
+            admin_id=session["admin_id"],
+            ip=request.remote_addr,
+            reason="添加角色：{0}".format(role.name)
+        )
+        db.session.add(oplog)
+        db.session.commit()
+        flash("添加角色成功", "ok")
+        return redirect(url_for("admin.role_add"))
+    return render_template("admin/role_add.html", form=form)
 
 
-@admin.route("/role/list/")
+# 角色列表
+@admin.route("/role/list/", methods=["GET"])
+@admin.route("/role/list/<int:page>/", methods=["GET"])
 @admin_login_req
-def role_list():
-    return render_template("admin/role_list.html")
+def role_list(page=None):
+    if page is None:
+        page = 1
+    page_data = Role.query.order_by(
+        Role.addtime.desc()
+    ).paginate(page=page, per_page=10)
+    return render_template("admin/role_list.html", page_data=page_data)
+
+
+# 角色删除
+@admin.route("/role/del/<int:id>/", methods=["GET"])
+@admin_login_req
+def role_del(id=None):
+    role = Role.query.filter_by(id=id).first_or_404()
+    db.session.delete(role)
+    oplog = Oplog(
+        admin_id=session["admin_id"],
+        ip=request.remote_addr,
+        reason="删除角色：{0}".format(role.name)
+    )
+    db.session.add(oplog)
+    db.session.commit()
+    flash("删除角色成功", "ok")
+    return redirect(url_for("admin.role_list"))
+
+
+# 角色编辑
+@admin.route("/role/edit/<int:id>/", methods=["GET", "POST"])
+@admin_login_req
+def role_edit(id=None):
+    form = RoleForm()
+    role = Role.query.filter_by(id=id).first_or_404()
+    if request.method == "GET":
+        auths = role.auths
+        if auths:
+            form.auths.data = list(map(lambda i: int(i), auths.split(",")))
+    if form.validate_on_submit():
+        data = form.data
+        role.name = data["name"]
+        role.auths = ",".join(map(lambda i: str(i), data["auths"]))
+        db.session.add(role)
+        db.session.commit()
+        flash("修改角色成功", "ok")
+        return redirect(url_for("admin.role_edit", id=id))
+    return render_template("admin/role_edit.html", form=form, role=role)
 
 
 @admin.route("/admin/add/")
