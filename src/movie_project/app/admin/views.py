@@ -71,7 +71,7 @@ def admin_auth(f):
 def rename_filename(filename):
     fileinfo = os.path.splitext(filename)
     filename = datetime.datetime.now().strftime("%Y%m%d%H%M%S") \
-               + str(uuid.uuid4().hex) \
+               + uuid.uuid4().hex \
                + fileinfo[-1]
 
     return filename
@@ -119,7 +119,6 @@ def login():
 
 
 @admin.route("/logout/")
-@admin_login_req
 def logout():
     oplog = Oplog(
         admin_id=session["admin_id"],

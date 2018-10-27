@@ -424,7 +424,7 @@ class AdminForm(FlaskForm):
         description="管理员密码",
         render_kw={
             "class": "form-control",
-            "placeholder": "请输入新密码！",
+            "placeholder": "请输入管理员密码！",
             "required": False
         }
     )
