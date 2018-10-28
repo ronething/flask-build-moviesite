@@ -50,18 +50,12 @@
                             <th>编号</th>
                             <th>角色名称</th>
                             <th>添加时间</th>
-                            <th>操作事项</th>
                         </tr>
                         {% for i in page_data.items %}
                         <tr>
                             <td>{{ i.id }}</td>
                             <td>{{ i.name }}</td>
                             <td>{{ i.addtime }}</td>
-                            <td>
-                                <a href="{{ url_for('admin.role_edit', id=i.id) }}" class="label label-success">编辑</a>
-                                &nbsp;
-                                <a href="{{ url_for('admin.role_del', id=i.id) }}" class="label label-danger">删除</a>
-                            </td>
                         </tr>
                         {% endfor %}
                         </tbody>

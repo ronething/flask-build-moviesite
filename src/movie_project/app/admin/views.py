@@ -120,13 +120,14 @@ def login():
 
 @admin.route("/logout/")
 def logout():
-    oplog = Oplog(
-        admin_id=session["admin_id"],
-        ip=request.remote_addr,
-        reason="注销管理员账户 {0} ".format(session["account"])
-    )
-    db.session.add(oplog)
-    db.session.commit()
+    if "admin_id" in session:
+        oplog = Oplog(
+            admin_id=session["admin_id"],
+            ip=request.remote_addr,
+            reason="注销管理员账户 {0} ".format(session["account"])
+        )
+        db.session.add(oplog)
+        db.session.commit()
     session.pop("account", None)
     session.pop("admin_id", None)
     flash("注销成功", "ok")
@@ -221,23 +222,24 @@ def tag_edit(id=None):
     return render_template("admin/tag_edit.html", form=form, tag=tag)
 
 
-# 标签删除
+# 标签删除 删除后 movie 关联的 tag_id 就为 null 不可
 @admin.route("/tag/del/<int:id>/", methods=["GET"])
 @admin_login_req
 @admin_auth
 def tag_del(id=None):
-    tag = Tag.query.filter_by(id=id).first_or_404()
-    db.session.delete(tag)
+    pass
+    # tag = Tag.query.filter_by(id=id).first_or_404()
+    # db.session.delete(tag)
+    # # db.session.commit()
+    # oplog = Oplog(
+    #     admin_id=session["admin_id"],
+    #     ip=request.remote_addr,
+    #     reason="删除标签：{0}".format(tag.name)
+    # )
+    # db.session.add(oplog)
     # db.session.commit()
-    oplog = Oplog(
-        admin_id=session["admin_id"],
-        ip=request.remote_addr,
-        reason="删除标签：{0}".format(tag.name)
-    )
-    db.session.add(oplog)
-    db.session.commit()
-    flash("删除标签成功", "ok")
-    return redirect(url_for("admin.tag_list"))
+    # flash("删除标签成功", "ok")
+    # return redirect(url_for("admin.tag_list"))
 
 
 # 电影添加
@@ -246,6 +248,7 @@ def tag_del(id=None):
 @admin_auth
 def movie_add():
     form = MovieForm()
+    form.tag_id.choices = [(i.id, i.name) for i in Tag.query.all()]
     if form.validate_on_submit():
         data = form.data
         # 判断是否标题重复
@@ -781,44 +784,47 @@ def role_list(page=None):
     return render_template("admin/role_list.html", page_data=page_data)
 
 
-# 角色删除
+# 角色删除 删除角色的话 对应的管理员的 role_id 会被置为 NULL 到时就麻烦了
 @admin.route("/role/del/<int:id>/", methods=["GET"])
 @admin_login_req
 @admin_auth
 def role_del(id=None):
-    role = Role.query.filter_by(id=id).first_or_404()
-    db.session.delete(role)
-    oplog = Oplog(
-        admin_id=session["admin_id"],
-        ip=request.remote_addr,
-        reason="删除角色：{0}".format(role.name)
-    )
-    db.session.add(oplog)
-    db.session.commit()
-    flash("删除角色成功", "ok")
-    return redirect(url_for("admin.role_list"))
+    pass
+    # role = Role.query.filter_by(id=id).first_or_404()
+    # db.session.delete(role)
+    # oplog = Oplog(
+    #     admin_id=session["admin_id"],
+    #     ip=request.remote_addr,
+    #     reason="删除角色：{0}".format(role.name)
+    # )
+    # db.session.add(oplog)
+    # db.session.commit()
+    # flash("删除角色成功", "ok")
+    # return redirect(url_for("admin.role_list"))
 
 
-# 角色编辑
+# TODO 可加入 角色权限查看功能 只能查看
+# 角色编辑 为了安全起见 编辑功能也取消
 @admin.route("/role/edit/<int:id>/", methods=["GET", "POST"])
 @admin_login_req
 @admin_auth
 def role_edit(id=None):
-    form = RoleForm()
-    role = Role.query.filter_by(id=id).first_or_404()
-    if request.method == "GET":
-        auths = role.auths
-        if auths:
-            form.auths.data = list(map(lambda i: int(i), auths.split(",")))
-    if form.validate_on_submit():
-        data = form.data
-        role.name = data["name"]
-        role.auths = ",".join(map(lambda i: str(i), data["auths"]))
-        db.session.add(role)
-        db.session.commit()
-        flash("修改角色成功", "ok")
-        return redirect(url_for("admin.role_edit", id=id))
-    return render_template("admin/role_edit.html", form=form, role=role)
+    pass
+    # form = RoleForm()
+    # role = Role.query.filter_by(id=id).first_or_404()
+    # if request.method == "GET":
+    #     auths = role.auths
+    #     if auths:
+    #         form.auths.data = list(map(lambda i: int(i), auths.split(",")))
+    # if form.validate_on_submit():
+    #     data = form.data
+    #     role.name = data["name"]
+    #     role.auths = ",".join(map(lambda i: str(i), data["auths"]))
+    #     db.session.add(role)
+    #     db.session.commit()
+    #     flash("修改角色成功", "ok")
+    #     return redirect(url_for("admin.role_edit", id=id))
+    # return render_template("admin/role_edit.html", form=form, role=role)
 
 
 # 管理员添加
@@ -827,13 +833,15 @@ def role_edit(id=None):
 @admin_auth
 def admin_add():
     form = AdminForm()
+    role_list = Role.query.all()
+    form.role_id.choices = [(i.id, i.name) for i in role_list]
     if form.validate_on_submit():
         data = form.data
         admin = Admin(
             name=data["name"],
             pwd=generate_password_hash(data["pwd"]),
             role_id=data["role_id"],
-            is_super=1,     # 表示普通管理员
+            is_super=1,  # 表示普通管理员
         )
         db.session.add(admin)
         oplog = Oplog(

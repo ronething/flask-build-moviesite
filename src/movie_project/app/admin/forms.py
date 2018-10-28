@@ -16,15 +16,11 @@ from wtforms.validators import DataRequired, ValidationError, EqualTo
 
 from app.models import Admin, Tag, Auth, Role
 
-# TODO 无法实时更新 tags or auths_lsit 后续需要修改
-# 查询所有标签
-tags = Tag.query.all()
+# DO 无法实时更新 tags or auths_lsit 后续需要修改
 # 查询所有权限
 auths_list = Auth.query.order_by(
     Auth.url.desc()
 )
-# 查询所有角色
-role_list = Role.query.all()
 
 
 class LoginForm(FlaskForm):
@@ -168,7 +164,6 @@ class MovieForm(FlaskForm):
             DataRequired("请选择标签！")
         ],
         coerce=int,
-        choices=[(i.id, i.name) for i in tags],
         description="标签",
         render_kw={
             "class": "form-control",
@@ -449,7 +444,6 @@ class AdminForm(FlaskForm):
             DataRequired("请选择角色！")
         ],
         coerce=int,
-        choices=[(i.id, i.name) for i in role_list],
         description="所属角色",
         render_kw={
             "class": "form-control",

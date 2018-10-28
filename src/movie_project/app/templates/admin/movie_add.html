@@ -1,5 +1,12 @@
 {% extends "admin/admin.html" %}
 
+{% block css %}
+<link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='dplayer/dist/DPlayer.min.css') }}">
+<script type="text/javascript" src="{{ url_for('static', filename='dplayer/dist/DPlayer.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='dplayer/plugins/flv.min.js') }}"></script>
+<script type="text/javascript" src="{{ url_for('static', filename='dplayer/plugins/hls.min.js') }}"></script>
+{% endblock %}
+
 {% block content %}
 <!--内容-->
 <section class="content-header">
@@ -10,6 +17,9 @@
     </ol>
 </section>
 <section class="content" id="showcontent">
+    <div style="margin-top:5px;">
+        <div id="dplayer_movie"></div>
+    </div>
     <div class="row">
         <div class="col-md-12">
             <div class="box box-primary">
@@ -49,9 +59,6 @@
                                 <font style="color: red">{{ err }}</font>
                             </div>
                             {% endfor %}
-                            <div style="margin-top:5px;">
-                                <div id="moviecontainer"></div>
-                            </div>
                         </div>
                         <div class="form-group">
                             {{ form.info.label }}
@@ -133,35 +140,15 @@
 
 {% block js %}
 <!--播放页面-->
-<script src="{{ url_for('static', filename='jwplayer/jwplayer.js') }}"></script>
-<script type="text/javascript">
-    jwplayer.key = "P9VTqT/X6TSP4gi/hy1wy23BivBhjdzVjMeOaQ==";
-
-</script>
-<script type="text/javascript">
-    jwplayer("moviecontainer").setup({
-        flashplayer: "{{ url_for('static', filename='jwplayer/jwplayer.flash.swf') }}",
-        playlist: [{
-            file: "{{ url_for('static', filename='video/demo.mp4') }}",
-            title: "昨日青空"
-        }],
-        modes: [{
-            type: "html5"
-        }, {
-            type: "flash",
-            src: "{{ url_for('static', filename='jwplayer/jwplayer.flash.swf') }}"
-        }, {
-            type: "download"
-        }],
-        skin: {
-            name: "vapor"
-        },
-        "playlist.position": "left",
-        "playlist.size": 200,
-        height: 250,
-        width: 387,
+<script>
+    const dp = new DPlayer({
+        container: document.getElementById('dplayer_movie'),
+        preload: 'auto',
+        video: {
+            url: "{{ url_for('static', filename='video/demo.mp4') }}",
+            // pic: "{{ url_for('static', filename='video/demo.jpg') }}",
+        }
     });
-
 </script>
 <script>
     $(document).ready(function () {
