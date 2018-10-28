@@ -99,7 +99,7 @@ def login():
             db.session.add(oplog)
             db.session.commit()
             flash("密码错误！", "err")
-            return redirect(url_for("admin.login"))
+            return redirect(url_for("admin.login", next=request.args.get("next", "")))
         session["account"] = data["account"]
         session["admin_id"] = account.id
         adminlog = Adminlog(
