@@ -22,7 +22,7 @@ class User(db.Model):
     email = db.Column(db.String(100), unique=True)
     phone = db.Column(db.String(11), unique=True)
     info = db.Column(db.Text)                       # 个性简介
-    face = db.Column(db.String(255), unique=True)   # 头像
+    face = db.Column(db.String(255))   # 头像
     addtime = db.Column(db.DateTime, index=True, default=datetime.now)   # 注册时间
     uuid = db.Column(db.String(255), unique=True)   # 唯一标识符
     userlogs = db.relationship('Userlog', backref='user')   # 会员日志外键关系关联

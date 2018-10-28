@@ -14,13 +14,13 @@ import datetime
 import json
 
 from . import home
-from flask import render_template, redirect, url_for, flash, session, request
+from flask import render_template, redirect, url_for, flash, session, request, Response
 from app.home.forms import RegisterForm, LoginForm, UserDetailForm, PwdForm, CommentForm
 from app.models import User, Userlog, Preview, Tag, Movie, Comment, Moviecol
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 from pypinyin import lazy_pinyin
-from app import db, app
+from app import db, app, rd
 from functools import wraps
 
 
@@ -365,3 +365,110 @@ def play(id=None, page=None):
     db.session.add(movie)
     db.session.commit()
     return render_template("home/play.html", movie=movie, form=form, page_data=page_data)
+
+
+# 电影详情 使用 dplayer 弹幕播放器
+@home.route("/video/<int:id>/", methods=["GET", "POST"])
+@home.route("/video/<int:id>/<int:page>/", methods=["GET", "POST"])
+def video(id=None, page=None):
+    movie = Movie.query.join(
+        Tag
+    ).filter(
+        Movie.id == id,
+        Movie.tag_id == Tag.id
+    ).first_or_404()
+    form = CommentForm()
+
+    # 评论列表
+    if page is None:
+        page = 1
+    page_data = Comment.query.join(
+        Movie
+    ).join(
+        User
+    ).filter(
+        Movie.id == movie.id,
+        User.id == Comment.user_id
+    ).order_by(
+        Comment.addtime.desc()
+    ).paginate(page=page, per_page=10)
+
+    movie.playnum = movie.playnum + 1
+    if "user_id" in session and form.validate_on_submit():
+        data = form.data
+        # TODO content 插入的时候需要过滤一些特殊字符 防止注入攻击之类的
+        comment = Comment(
+            content=data["content"],
+            movie_id=movie.id,
+            user_id=session["user_id"]
+        )
+        db.session.add(comment)
+        movie.commentnum = movie.commentnum + 1
+        db.session.add(movie)
+        db.session.commit()
+        flash("评论成功", "ok")
+        return redirect(url_for("home.video", id=movie.id))
+    db.session.add(movie)
+    db.session.commit()
+    return render_template("home/video.html", movie=movie, form=form, page_data=page_data)
+
+
+# 发送弹幕
+@home.route("/danmu/v3/", methods=["GET", "POST"])
+def danmu():
+    if request.method == "GET":
+        id = request.args.get("id")
+        key = "movie" + str(id)
+        """
+        弹幕格式
+        {
+            "code": 0,
+            "data": [
+                [
+                time,
+                type,
+                color,
+                author,
+                text
+                ]
+            ]
+        }
+        """
+
+        if rd.llen(key):
+            msgs = rd.lrange(key, 0, 2999)
+            res = {
+                "code": 0,
+                "data": [[json.loads(i)["time"], json.loads(i)["type"],
+                          json.loads(i)["color"], json.loads(i)["author"],
+                          json.loads(i)["text"]] for i
+                         in msgs]
+            }
+        else:
+            res = {
+                "code": 0,
+                "data": []
+            }
+
+        res_json = json.dumps(res)
+
+    if request.method == "POST":
+        data = json.loads(request.get_data())
+        msg = {
+            "id": data["id"],
+            "author": data["author"],
+            "time": data["time"],
+            "text": data["text"],
+            "color": data["color"],
+            "type": data["type"]
+        }
+        res = {
+            "code": 1,
+            "data": msg
+        }
+
+        res_json = json.dumps(res)
+
+        rd.lpush("movie" + str(data["id"]), json.dumps(msg))
+
+    return Response(res_json, mimetype="application/json")
