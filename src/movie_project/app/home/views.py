@@ -11,11 +11,12 @@ Less is more.
 import uuid
 import os
 import datetime
+import json
 
 from . import home
 from flask import render_template, redirect, url_for, flash, session, request
-from app.home.forms import RegisterForm, LoginForm, UserDetailForm, PwdForm
-from app.models import User, Userlog, Preview, Tag, Movie
+from app.home.forms import RegisterForm, LoginForm, UserDetailForm, PwdForm, CommentForm
+from app.models import User, Userlog, Preview, Tag, Movie, Comment, Moviecol
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 from pypinyin import lazy_pinyin
@@ -96,7 +97,7 @@ def index(page=None):
 
     if page is None:
         page = 1
-    page_data = page_data.paginate(page=page, per_page=10)
+    page_data = page_data.paginate(page=page, per_page=12)
 
     return render_template("home/index.html", tags=tags, param=param, star_list=star_list, page_data=page_data)
 
@@ -110,7 +111,7 @@ def login():
         user = User.query.filter_by(name=data["name"]).first()
         if not user.check_pwd(data["pwd"]):
             flash("密码错误！", "err")
-            return redirect(url_for("home.login"))
+            return redirect(url_for("home.login", next=request.args.get("next", "")))
         session["user_name"] = data["name"]
         session["user_id"] = user.id
         userlog = Userlog(
@@ -199,10 +200,23 @@ def pwd():
 
 
 # 评论记录
-@home.route("/comments/")
+@home.route("/comments/", methods=["GET"])
+@home.route("/comments/<int:page>/", methods=["GET"])
 @user_login_req
-def comments():
-    return render_template("home/comments.html")
+def comments(page=None):
+    if page is None:
+        page = 1
+    page_data = Comment.query.join(
+        Movie
+    ).join(
+        User
+    ).filter(
+        Movie.id == Comment.movie_id,
+        User.id == session["user_id"]
+    ).order_by(
+        Comment.addtime.desc()
+    ).paginate(page=page, per_page=5)
+    return render_template("home/comments.html", page_data=page_data)
 
 
 # 登陆日志
@@ -220,11 +234,54 @@ def loginlog(page=None):
     return render_template("home/loginlog.html", page_data=page_data)
 
 
-# 电影收藏
-@home.route("/moviecol/")
+# 电影收藏添加 ajax 返回 json
+@home.route("/moviecol/add/", methods=["GET"])
 @user_login_req
-def moviecol():
-    return render_template("home/moviecol.html")
+def moviecol_add():
+    mid = request.args.get("mid", "")
+    moviecol_count = Moviecol.query.filter_by(
+        user_id=session["user_id"],
+        movie_id=int(mid),
+    ).count()
+    if moviecol_count == 1:
+        data = dict(
+            ok=0,
+            message="不可重复收藏"
+        )
+
+        return json.dumps(data)
+
+    if moviecol_count == 0:
+        movie_col = Moviecol(
+            user_id=session["user_id"],
+            movie_id=int(mid)
+        )
+        db.session.add(movie_col)
+        db.session.commit()
+        data = dict(
+            ok=1,
+            message="收藏电影成功"
+        )
+
+    return json.dumps(data)
+
+
+# 电影收藏
+@home.route("/moviecol/", methods=["GET"])
+@home.route("/moviecol/<int:page>/", methods=["GET"])
+@user_login_req
+def moviecol(page=None):
+    if page is None:
+        page = 1
+    page_data = Moviecol.query.join(
+        Movie
+    ).filter(
+        Movie.id == Moviecol.movie_id,
+        Moviecol.user_id == session["user_id"],
+    ).order_by(
+        Moviecol.addtime.desc()
+    ).paginate(page=page, per_page=5)
+    return render_template("home/moviecol.html", page_data=page_data)
 
 
 # 上映预告轮播
@@ -237,12 +294,74 @@ def animation():
 
 
 # 搜索
-@home.route("/search/")
-def search():
-    return render_template("home/search.html")
+@home.route("/search/", methods=["GET"])
+@home.route("/search/<int:page>/", methods=["GET"])
+def search(page=None):
+    key = request.args.get("s", "")
+    if page is None:
+        page = 1
+    count = Movie.query.filter(
+        # ilike 和 like 类似 不过 ilike 忽略大小写
+        Movie.title.ilike('%' + key + '%')
+    ).count()
+    page_data = Movie.query.filter(
+        Movie.title.ilike('%' + key + '%')
+    ).order_by(
+        Movie.addtime.desc()
+    ).paginate(page=page, per_page=5)
+    return render_template("home/search.html", page_data=page_data, key=key, count=count)
 
 
 # 电影详情
-@home.route("/play/")
-def play():
-    return render_template("home/play.html")
+@home.route("/play/<int:id>/", methods=["GET", "POST"])
+@home.route("/play/<int:id>/<int:page>/", methods=["GET", "POST"])
+def play(id=None, page=None):
+    movie = Movie.query.join(
+        Tag
+    ).filter(
+        Movie.id == id,
+        Movie.tag_id == Tag.id
+    ).first_or_404()
+    form = CommentForm()
+
+    # 评论列表
+    if page is None:
+        page = 1
+    page_data = Comment.query.join(
+        Movie
+    ).join(
+        User
+    ).filter(
+        Movie.id == movie.id,
+        User.id == Comment.user_id
+    ).order_by(
+        Comment.addtime.desc()
+    ).paginate(page=page, per_page=10)
+
+    # comment_count = Comment.query.join(
+    #     Movie
+    # ).join(
+    #     User
+    # ).filter(
+    #     Movie.id == movie.id,
+    #     User.id == Comment.user_id
+    # ).count()
+
+    movie.playnum = movie.playnum + 1
+    if "user_id" in session and form.validate_on_submit():
+        data = form.data
+        # TODO content 插入的时候需要过滤一些特殊字符 防止注入攻击之类的
+        comment = Comment(
+            content=data["content"],
+            movie_id=movie.id,
+            user_id=session["user_id"]
+        )
+        db.session.add(comment)
+        movie.commentnum = movie.commentnum + 1
+        db.session.add(movie)
+        db.session.commit()
+        flash("评论成功", "ok")
+        return redirect(url_for("home.play", id=movie.id))
+    db.session.add(movie)
+    db.session.commit()
+    return render_template("home/play.html", movie=movie, form=form, page_data=page_data)
