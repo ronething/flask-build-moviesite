@@ -35,7 +35,6 @@
                         <tr>
                             <th>编号</th>
                             <th>管理员名称</th>
-                            <th>管理员类型</th>
                             <th>管理员角色</th>
                             <th>添加时间</th>
                         </tr>
@@ -43,11 +42,6 @@
                         <tr>
                             <td>{{ i.id }}</td>
                             <td>{{ i.name }}</td>
-                            {% if i.is_super == 1%}
-                            <td>普通管理员</td>
-                            {% else %}
-                            <td>超级管理员</td>
-                            {% endif %}
                             <td>{{ i.role.name }}</td>
                             <td>{{ i.addtime }}</td>
                         </tr>

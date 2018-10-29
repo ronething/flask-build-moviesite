@@ -439,7 +439,7 @@ def preview_list(page=None):
     if page is None:
         page = 1
     page_data = Preview.query.order_by(
-        Preview.addtime.asc()
+        Preview.addtime.desc()
     ).paginate(page=page, per_page=10)
     return render_template("admin/preview_list.html", page_data=page_data)
 
@@ -713,17 +713,18 @@ def auth_list(page=None):
 @admin_login_req
 @admin_auth
 def auth_del(id=None):
-    auth = Auth.query.filter_by(id=id).first_or_404()
-    db.session.delete(auth)
-    oplog = Oplog(
-        admin_id=session["admin_id"],
-        ip=request.remote_addr,
-        reason="删除权限：{0} url: {1}".format(auth.name, auth.url)
-    )
-    db.session.add(oplog)
-    db.session.commit()
-    flash("删除权限成功", "ok")
-    return redirect(url_for("admin.auth_list"))
+    pass
+    # auth = Auth.query.filter_by(id=id).first_or_404()
+    # db.session.delete(auth)
+    # oplog = Oplog(
+    #     admin_id=session["admin_id"],
+    #     ip=request.remote_addr,
+    #     reason="删除权限：{0} url: {1}".format(auth.name, auth.url)
+    # )
+    # db.session.add(oplog)
+    # db.session.commit()
+    # flash("删除权限成功", "ok")
+    # return redirect(url_for("admin.auth_list"))
 
 
 # 权限编辑
@@ -731,17 +732,18 @@ def auth_del(id=None):
 @admin_login_req
 @admin_auth
 def auth_edit(id=None):
-    form = AuthForm()
-    auth = Auth.query.filter_by(id=id).first_or_404()
-    if form.validate_on_submit():
-        data = form.data
-        auth.name = data["name"]
-        auth.url = data["url"]
-        db.session.add(auth)
-        db.session.commit()
-        flash("修改权限成功", "ok")
-        return redirect(url_for("admin.auth_edit", id=id))
-    return render_template("admin/auth_edit.html", form=form, auth=auth)
+    pass
+    # form = AuthForm()
+    # auth = Auth.query.filter_by(id=id).first_or_404()
+    # if form.validate_on_submit():
+    #     data = form.data
+    #     auth.name = data["name"]
+    #     auth.url = data["url"]
+    #     db.session.add(auth)
+    #     db.session.commit()
+    #     flash("修改权限成功", "ok")
+    #     return redirect(url_for("admin.auth_edit", id=id))
+    # return render_template("admin/auth_edit.html", form=form, auth=auth)
 
 
 # 角色添加

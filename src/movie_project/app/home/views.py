@@ -151,8 +151,8 @@ def register():
         )
         db.session.add(user)
         db.session.commit()
-        flash("注册成功", "ok")
-        return redirect(url_for("home.register"))
+        flash("注册成功，请登录！", "ok")
+        return redirect(url_for("home.login"))
     return render_template("home/register.html", form=form)
 
 
@@ -298,6 +298,8 @@ def animation():
 @home.route("/search/<int:page>/", methods=["GET"])
 def search(page=None):
     key = request.args.get("s", "")
+    if not key:
+        return redirect(url_for("home.index"))
     if page is None:
         page = 1
     count = Movie.query.filter(
@@ -335,7 +337,7 @@ def play(id=None, page=None):
         Movie.id == movie.id,
         User.id == Comment.user_id
     ).order_by(
-        Comment.addtime.desc()
+        Comment.addtime.asc()
     ).paginate(page=page, per_page=10)
 
     # comment_count = Comment.query.join(
@@ -390,7 +392,7 @@ def video(id=None, page=None):
         Movie.id == movie.id,
         User.id == Comment.user_id
     ).order_by(
-        Comment.addtime.desc()
+        Comment.addtime.asc()
     ).paginate(page=page, per_page=10)
 
     movie.playnum = movie.playnum + 1

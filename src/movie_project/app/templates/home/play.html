@@ -182,9 +182,11 @@
                     </li>
                     {% endfor %}
                 </ul>
+                {% if page_data.items %}
                 <div class="col-md-12 text-center">
                     {{ pagination.page(page_data, "home.play", movie.id) }}
                 </div>
+                {% endif %}
             </div>
         </div>
     </div>
