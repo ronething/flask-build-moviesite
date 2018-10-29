@@ -290,7 +290,7 @@ def animation():
     data = Preview.query.order_by(
         Preview.addtime.desc()
     ).paginate(page=1, per_page=5)
-    return render_template("home/animation.html", data=data)
+    return render_template("home/animation_bootstrap.html", data=data)
 
 
 # 搜索

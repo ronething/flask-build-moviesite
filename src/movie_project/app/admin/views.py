@@ -339,6 +339,7 @@ def movie_del(id=None):
 @admin_auth
 def movie_edit(id=None):
     form = MovieForm()
+    form.tag_id.choices = [(i.id, i.name) for i in Tag.query.all()]
     form.url.validators = []
     form.logo.validators = []
     movie = Movie.query.filter_by(id=id).first_or_404()
