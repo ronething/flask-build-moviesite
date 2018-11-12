@@ -20,7 +20,7 @@ from app.models import User, Userlog, Preview, Tag, Movie, Comment, Moviecol
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 from pypinyin import lazy_pinyin
-from app import db, app, rd
+from app import db, app
 from functools import wraps
 
 
@@ -129,8 +129,7 @@ def login():
 def logout():
     session.pop("user_name", None)
     session.pop("user_id", None)
-    flash("注销成功", "ok")
-    return redirect(url_for("home.login"))
+    return redirect(url_for("home.index"))
 
 
 # 会员注册
@@ -152,7 +151,7 @@ def register():
         db.session.add(user)
         db.session.commit()
         flash("注册成功，请登录！", "ok")
-        return redirect(url_for("home.login"))
+        return redirect(url_for("home.login", next=request.args.get("next")))
     return render_template("home/register.html", form=form)
 
 
@@ -418,59 +417,60 @@ def video(id=None, page=None):
 # 发送弹幕
 @home.route("/danmu/v3/", methods=["GET", "POST"])
 def danmu():
-    if request.method == "GET":
-        id = request.args.get("id")
-        key = "movie" + str(id)
-        """
-        弹幕格式
-        {
-            "code": 0,
-            "data": [
-                [
-                time,
-                type,
-                color,
-                author,
-                text
-                ]
-            ]
-        }
-        """
-
-        if rd.llen(key):
-            msgs = rd.lrange(key, 0, 2999)
-            res = {
-                "code": 0,
-                "data": [[json.loads(i)["time"], json.loads(i)["type"],
-                          json.loads(i)["color"], json.loads(i)["author"],
-                          json.loads(i)["text"]] for i
-                         in msgs]
-            }
-        else:
-            res = {
-                "code": 0,
-                "data": []
-            }
-
-        res_json = json.dumps(res)
-
-    if request.method == "POST":
-        data = json.loads(request.get_data())
-        msg = {
-            "id": data["id"],
-            "author": data["author"],
-            "time": data["time"],
-            "text": data["text"],
-            "color": data["color"],
-            "type": data["type"]
-        }
-        res = {
-            "code": 1,
-            "data": msg
-        }
-
-        res_json = json.dumps(res)
-
-        rd.lpush("movie" + str(data["id"]), json.dumps(msg))
-
-    return Response(res_json, mimetype="application/json")
+    pass
+    # if request.method == "GET":
+    #     id = request.args.get("id")
+    #     key = "movie" + str(id)
+    #     """
+    #     弹幕格式
+    #     {
+    #         "code": 0,
+    #         "data": [
+    #             [
+    #             time,
+    #             type,
+    #             color,
+    #             author,
+    #             text
+    #             ]
+    #         ]
+    #     }
+    #     """
+    #
+    #     if rd.llen(key):
+    #         msgs = rd.lrange(key, 0, 2999)
+    #         res = {
+    #             "code": 0,
+    #             "data": [[json.loads(i)["time"], json.loads(i)["type"],
+    #                       json.loads(i)["color"], json.loads(i)["author"],
+    #                       json.loads(i)["text"]] for i
+    #                      in msgs]
+    #         }
+    #     else:
+    #         res = {
+    #             "code": 0,
+    #             "data": []
+    #         }
+    #
+    #     res_json = json.dumps(res)
+    #
+    # if request.method == "POST":
+    #     data = json.loads(request.get_data())
+    #     msg = {
+    #         "id": data["id"],
+    #         "author": data["author"],
+    #         "time": data["time"],
+    #         "text": data["text"],
+    #         "color": data["color"],
+    #         "type": data["type"]
+    #     }
+    #     res = {
+    #         "code": 1,
+    #         "data": msg
+    #     }
+    #
+    #     res_json = json.dumps(res)
+    #
+    #     rd.lpush("movie" + str(data["id"]), json.dumps(msg))
+    #
+    # return Response(res_json, mimetype="application/json")

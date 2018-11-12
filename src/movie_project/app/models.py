@@ -76,6 +76,7 @@ class Movie(db.Model):
     area = db.Column(db.String(255))    # 上映地区
     release_time = db.Column(db.Date)   # 上映时间
     length = db.Column(db.String(100))  # 电影长度
+    uuid = db.Column(db.String(255), unique=True)  # 唯一标识符
     addtime = db.Column(db.DateTime, index=True, default=datetime.now)   # 添加时间
     comments = db.relationship("Comment", backref='movie')   # 评论外键关联
     moviecols = db.relationship("Moviecol", backref='movie') # 电影收藏外键关联

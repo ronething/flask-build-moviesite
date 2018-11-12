@@ -17,9 +17,6 @@
     </ol>
 </section>
 <section class="content" id="showcontent">
-    <div style="margin-top:5px;">
-        <div id="dplayer_movie"></div>
-    </div>
     <div class="row">
         <div class="col-md-12">
             <div class="box box-primary">
@@ -140,16 +137,6 @@
 
 {% block js %}
 <!--播放页面-->
-<script>
-    const dp = new DPlayer({
-        container: document.getElementById('dplayer_movie'),
-        preload: 'auto',
-        video: {
-            url: "{{ url_for('static', filename='video/demo.mp4') }}",
-            // pic: "{{ url_for('static', filename='video/demo.jpg') }}",
-        }
-    });
-</script>
 <script>
     $(document).ready(function () {
         $('#release_time').datepicker({

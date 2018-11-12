@@ -54,7 +54,11 @@ def admin_auth(f):
             Role.id == Admin.role_id,
             Admin.id == session["admin_id"],
         ).first()
-        auths = admin.role.auths
+        try:
+            auths = admin.role.auths
+        except Exception as e:
+            flash("您的账户貌似不能用了 不谈了。", "ok")
+            return redirect(url_for("admin.login", next=request.url))
         auths = list(map(lambda i: int(i), auths.split(",")))
         auths_list = Auth.query.all()
         urls = [i.url for i in auths_list for j in auths if j == i.id]
@@ -284,6 +288,7 @@ def movie_add():
             area=data["area"],
             release_time=data["release_time"],
             length=data["length"],
+            uuid=uuid.uuid4().hex,
         )
         db.session.add(movie)
         oplog = Oplog(

@@ -11,7 +11,7 @@
         /* Make the image fully responsive */
         .carousel-inner img {
             width: 100%;
-            height: 100%;
+            height: 375px;
         }
     </style>
 </head>
@@ -29,12 +29,12 @@
 
     <!-- 轮播图片 -->
     <div class="carousel-inner">
-        <div class="carousel-item active">
-            <img style="height: 375px" src="{{ url_for('static', filename='uploads/' + data.items[0].logo) }}">
+        <div class="carousel-item active" style="text-align: center">
+            <img src="{{ url_for('static', filename='uploads/' + data.items[0].logo) }}">
         </div>
         {% for i in range(1, data.items|length) %}
-        <div class="carousel-item">
-            <img style="height: 375px" src={{ url_for('static', filename='uploads/' + data.items[i].logo) }}>
+        <div class="carousel-item" style="text-align: center">
+            <img src={{ url_for('static', filename='uploads/' + data.items[i].logo) }}>
         </div>
         {% endfor %}
     </div>

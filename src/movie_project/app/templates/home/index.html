@@ -102,10 +102,16 @@
             </div>
             {% endfor %}
             <!--<h1>?tid={{ param['tid'] }}&star={{ param['star'] }}&time={{ param['time'] }}&pm={{ param['pm'] }}&cm={{ param['cm'] }}</h1>-->
+            {% if page_data.items %}
             <div class="col-md-12">
                 {{ pagination.page(page_data, "home.index", param['tid'], param['star'], param['time'], param['pm'],
                 param['cm']) }}
             </div>
+            {% else %}
+            <div class="col-md-12">
+                <p>这里没有东西</p>
+            </div>
+            {% endif %}
         </div>
     </div>
 </div>

@@ -39,9 +39,11 @@
                 </div>
                 {% endfor %}
             </div>
+            {% if page_data.items %}
             <div class="col-md-12 text-center" style="margin-top:6px;">
                 {{ pagination.page(page_data, "home.moviecol") }}
             </div>
+            {% endif %}
         </div>
     </div>
 </div>

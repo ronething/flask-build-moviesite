@@ -57,11 +57,11 @@
                 </li>
                 {% if "user_id" not in session %}
                 <li>
-                    <a class="curlink" href="{{ url_for('home.login') }}"><span
+                    <a class="curlink" href="{{ url_for('home.login', next=request.url) }}"><span
                             class="glyphicon glyphicon-log-in"></span>&nbsp;登录</a>
                 </li>
                 <li>
-                    <a class="curlink" href="{{ url_for('home.register') }}"><span
+                    <a class="curlink" href="{{ url_for('home.register', next=request.url) }}"><span
                             class="glyphicon glyphicon-plus"></span>&nbsp;注册</a>
                 </li>
                 {% endif %}
