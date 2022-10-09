@@ -1,7 +1,5 @@
 # flask 搭建电影网站
 
-[![Join the chat at https://gitter.im/flask-build-moviesite/Lobby](https://badges.gitter.im/flask-build-moviesite/Lobby.svg)](https://gitter.im/flask-build-moviesite/Lobby?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 教程来自慕课网
 
 ![](https://i.loli.net/2018/10/22/5bcd4dd090acd.png)
@@ -86,8 +84,12 @@
 
 ====
 
+### notice
+
+时隔多年 程序运行待修复
+
 ### TODO
 
-[ ] 前端有些东西不够美观，要搞好看点。
+- [ ] 前端有些东西不够美观，要搞好看点。
 
-[ ] 想想还要实现什么功能。
+- [ ] 想想还要实现什么功能。
